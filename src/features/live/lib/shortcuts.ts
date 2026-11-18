@@ -7,7 +7,10 @@ export function bindShortcuts(actions: {
 }) {
   const handler = (e: KeyboardEvent) => {
     if (
-      (e.target as HTMLElement)?.closest("input,textarea,select,button") ||
+      (e.target as HTMLElement)?.closest(
+        "input,textarea,select,button,.show-overlay",
+      ) ||
+      document.querySelector(".show-overlay") ||
       e.repeat ||
       e.metaKey ||
       e.ctrlKey

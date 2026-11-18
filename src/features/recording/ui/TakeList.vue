@@ -21,7 +21,7 @@ defineProps<{ recorder: StageRecorder }>();
         ><small
           >{{ clock(t.duration) }} ·
           {{ (t.size / 1024 / 1024).toFixed(2) }} MB</small
-        >
+        ><small class="take-show">{{ t.showName }}</small>
       </div>
       <button @click="download(t.url, t.name)">下载</button
       ><button @click="recorder.remove(t.id)" aria-label="删除录制">×</button>

@@ -2,9 +2,12 @@
 import type { AudioEngine } from "../model/engine";
 import type { StageDocument } from "../../../shared/types";
 import { clock } from "../../../shared/math";
+import { formatBytes } from "../../../shared/hash";
 defineProps<{ engine: AudioEngine; doc: StageDocument }>();
 function load(e: Event, engine: AudioEngine) {
-  const f = (e.target as HTMLInputElement).files?.[0];
+  const input = e.target as HTMLInputElement;
+  const f = input.files?.[0];
+  input.value = "";
   if (f) void engine.file(f);
 }
 </script>
@@ -22,7 +25,7 @@ function load(e: Event, engine: AudioEngine) {
       >
         演示音轨</button
       ><label class="file-button"
-        >本地音频<input
+        >场景音频<input
           type="file"
           accept="audio/*"
           @change="load($event, engine)" /></label
@@ -40,7 +43,9 @@ function load(e: Event, engine: AudioEngine) {
         ><small>{{
           engine.state.source === "mic"
             ? "实时输入 · 不监听回放"
-            : "STEREO · LOOP ENABLED"
+            : engine.state.assetId
+              ? `SCENE AUDIO · ${formatBytes(engine.getAsset(engine.state.assetId)?.size ?? 0)}`
+              : "STEREO · LOOP ENABLED"
         }}</small>
       </div>
     </div>
@@ -79,6 +84,56 @@ function load(e: Event, engine: AudioEngine) {
         step="0.1"
         v-model.number="doc.sensitivity"
     /></label>
+    <template v-if="engine.state.source !== 'mic'">
+      <label class="control scene-audio-control"
+        >本场景音频音量
+        <b
+          >{{
+            Math.round(
+              (doc.scenes.find((s) => s.id === doc.activeId)?.audioGain ?? 1) *
+                100,
+            )
+          }}%</b
+        ><input
+          type="range"
+          min="0"
+          max="2"
+          step="0.01"
+          :value="doc.scenes.find((s) => s.id === doc.activeId)?.audioGain ?? 1"
+          @input="
+            (e) => {
+              const scene = doc.scenes.find((s) => s.id === doc.activeId);
+              if (scene) scene.audioGain = (e.target as HTMLInputElement).valueAsNumber;
+            }
+          "
+      /></label>
+      <label class="control"
+        >本场景起点
+        <b
+          >{{
+            clock(doc.scenes.find((s) => s.id === doc.activeId)?.audioOffset ?? 0)
+          }}</b
+        ><input
+          type="range"
+          min="0"
+          :max="Math.max(0, engine.state.duration - 0.1)"
+          step="0.1"
+          :value="
+            Math.min(
+              doc.scenes.find((s) => s.id === doc.activeId)?.audioOffset ?? 0,
+              Math.max(0, engine.state.duration - 0.1),
+            )
+          "
+          @input="
+            (e) => {
+              const scene = doc.scenes.find((s) => s.id === doc.activeId);
+              if (scene)
+                scene.audioOffset = (e.target as HTMLInputElement).valueAsNumber;
+            }
+          "
+          @change="engine.restartScene"
+      /></label>
+    </template>
     <p v-if="engine.state.error" role="alert">{{ engine.state.error }}</p>
     <div class="input-level">
       <span

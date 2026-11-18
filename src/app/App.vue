@@ -5,7 +5,6 @@ import {
   Radio,
   AudioLines,
   SlidersHorizontal,
-  Disc3,
   ArrowUpRight,
 } from "lucide-vue-next";
 import { createDocument } from "../shared/document";
@@ -19,11 +18,13 @@ import {
   SignalMeter,
 } from "../features/live";
 import { createRecorder, RecordPanel, TakeList } from "../features/recording";
+import { createShowStore, ShowPanel, ShowDialog } from "../features/show";
 const doc = createDocument(),
   audio = createAudio(doc),
-  scenes = createScenes(doc),
+  scenes = createScenes(doc, audio),
   controls = createControls(doc),
-  recorder = createRecorder();
+  recorder = createRecorder(doc),
+  show = createShowStore({ doc, audio });
 const canvas = ref<HTMLCanvasElement>(),
   stage = ref<HTMLElement>();
 const fullError = ref("");
@@ -72,11 +73,7 @@ onUnmounted(() => {
         <h1>让音乐，成为现场<span>。</span></h1>
         <p>从第一声节拍，到最后一束光。</p>
       </div>
-      <div class="project-badge">
-        <Disc3 :size="18" /><span
-          >UNTITLED SESSION<small>实时音频驱动 / 720P</small></span
-        >
-      </div>
+      <ShowPanel :doc="doc" :audio="audio" :store="show" />
     </div>
     <main>
       <aside class="left-column">
@@ -136,6 +133,7 @@ onUnmounted(() => {
         </div>
       </aside>
     </main>
+    <ShowDialog :store="show" />
     <footer>
       <span
         ><SlidersHorizontal :size="13" /> ALL SYSTEMS READY

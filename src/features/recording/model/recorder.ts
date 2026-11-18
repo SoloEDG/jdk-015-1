@@ -1,7 +1,8 @@
 import { reactive } from "vue";
-import type { Take } from "../../../shared/types";
+import type { StageDocument, Take } from "../../../shared/types";
 import { recordingMime, takeName } from "../lib/format";
-export function createRecorder() {
+
+export function createRecorder(doc: StageDocument) {
   const state = reactive({
     status: "idle",
     error: "",
@@ -12,10 +13,13 @@ export function createRecorder() {
     chunks: Blob[] = [],
     started = 0,
     timer = 0,
-    video: MediaStream | undefined;
+    video: MediaStream | undefined,
+    activeShow: { id: string; name: string } | undefined;
+
   function start(canvas: HTMLCanvasElement, audio: MediaStream) {
     if (state.status !== "idle") return;
     state.error = "";
+    activeShow = { id: doc.showId, name: doc.showName };
     try {
       if (!window.MediaRecorder || !canvas.captureStream)
         throw Error("此浏览器不支持舞台录制");
@@ -35,6 +39,8 @@ export function createRecorder() {
       };
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: recorder?.mimeType || mime });
+        // The take always belongs to the show that was live when it started,
+        // even if a different show is confirmed before the encoder finishes.
         state.takes.unshift({
           id: crypto.randomUUID(),
           url: URL.createObjectURL(blob),
@@ -42,8 +48,12 @@ export function createRecorder() {
           duration: state.elapsed,
           name: takeName(blob.type),
           mime: blob.type,
+          showId: activeShow?.id ?? doc.showId,
+          showName: activeShow?.name ?? doc.showName,
         });
         video?.getTracks().forEach((t) => t.stop());
+        video = undefined;
+        activeShow = undefined;
         state.status = "idle";
       };
       recorder.onerror = () => {
@@ -59,6 +69,8 @@ export function createRecorder() {
       }, 100);
     } catch (e) {
       video?.getTracks().forEach((t) => t.stop());
+      video = undefined;
+      activeShow = undefined;
       state.error = e instanceof Error ? e.message : "无法开始录制";
       state.status = "idle";
     }
@@ -81,6 +93,13 @@ export function createRecorder() {
     stop();
     state.takes.forEach((t) => URL.revokeObjectURL(t.url));
   }
-  return { state, start, stop, remove, dispose };
+  return {
+    state,
+    start,
+    stop,
+    remove,
+    dispose,
+    activeShow: () => activeShow,
+  };
 }
 export type StageRecorder = ReturnType<typeof createRecorder>;

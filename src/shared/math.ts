@@ -12,3 +12,8 @@ export function download(url: string, name: string) {
   a.download = name;
   a.click();
 }
+export function downloadBlob(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  download(url, name);
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
